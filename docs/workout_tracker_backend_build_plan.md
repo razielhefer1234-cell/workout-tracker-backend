@@ -246,16 +246,24 @@ Create a clean environment in which changes are reproducible and mistakes are ea
 
 ### Project-structure decisions
 
-Decide for yourself:
+Use three Django apps with clear domain boundaries:
+                
+- `accounts` owns the custom user model, registration, and authentication;
+- `exercises` owns the reusable exercise catalog and its seed process;
+- `workouts` owns workout plans, scheduled workout occurrences, recorded results, and progress reports.
 
-- how many Django apps represent meaningful domain boundaries;
-- where shared utilities belong;
-- where tests live;
-- where seed data lives;
-- where API documentation configuration belongs;
-- where environment-specific settings belong.
+Progress reports do not need a separate app in version 1 because they are calculated from workout data.
 
-Avoid both extremes: one giant file and a complex enterprise folder tree. This is a small project.
+Use these locations for supporting code:
+
+- keep code used by only one app inside that app;
+- put genuinely shared permissions, pagination, or exception helpers in a small top-level `common` package;
+- keep tests inside each app's `tests/` package, organized by the component or behavior they test;
+- put the repeatable exercise seed command at `exercises/management/commands/seed_exercises.py`;
+- keep DRF and OpenAPI settings in `config/settings.py` and schema/documentation URL routes in `config/urls.py`;
+- use one environment-driven `config/settings.py`, with local values in the ignored root `.env` file and harmless placeholders in the committed root `.env.example` file.
+
+Do not create empty folders or abstractions merely for appearance. Split a module only when it has become difficult to understand or has clearly separate responsibilities. This keeps the small project organized without creating an enterprise-style folder tree.
 
 ### First smoke checks
 
@@ -2126,4 +2134,3 @@ At that point, write a short retrospective:
 - What will you practice in the next project?
 
 Then move on. Finishing and reflecting will teach you more than endlessly polishing this small backend.
-
