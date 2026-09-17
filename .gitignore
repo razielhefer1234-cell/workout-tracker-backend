@@ -215,4 +215,10 @@ marimo/_lsp/
 __marimo__/
 
 # Streamlit
+
+# Django collected static files
+staticfiles/
+
+# macOS system files
+.DS_Store
 .streamlit/secrets.toml
