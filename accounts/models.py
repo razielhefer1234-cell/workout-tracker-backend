@@ -51,7 +51,7 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=30)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    creation = models.DateTimeField(default=timezone.now)
+    creation = models.DateTimeField(auto_now_add=True)
 
     objects = MyUserManager()
 
