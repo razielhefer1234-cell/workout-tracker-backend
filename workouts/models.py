@@ -2,6 +2,7 @@ from django.db import models
 from accounts.models import MyUser
 from django.core.validators import MinValueValidator
 from exercises.models import Exercise
+from django.conf import settings
 
 # Create your models here.
 class Workout(models.Model):
@@ -9,7 +10,7 @@ class Workout(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     description = models.TextField(blank=True)
     user = models.ForeignKey(
-        MyUser,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="workouts",
         related_query_name="workout",

@@ -1,9 +1,6 @@
 from django.db import models
-
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
-
-from django.utils import timezone
-
+from django.conf import settings
 
 class MyUserManager(BaseUserManager):
     def create_user(self, email, first_name, last_name, password):
@@ -61,3 +58,28 @@ class MyUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+
+class Profile(models.Model):
+    username = models.CharField(max_length=40, unique=True)
+    bio = models.CharField(max_length=250, blank=True)
+    picture = models.ImageField(
+        upload_to="profile_pics/",
+        blank=True,
+        null=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+
+    def __str__(self):
+        return self.username
+
+    class Meta:
+        ordering = ["username"]
+        verbose_name = "Profile"
+        verbose_name_plural = "Profiles"
+        db_table = "Profile"
