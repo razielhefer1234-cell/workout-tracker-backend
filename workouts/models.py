@@ -3,12 +3,14 @@ from accounts.models import MyUser
 from django.core.validators import MinValueValidator
 from exercises.models import Exercise
 from django.conf import settings
+from datetime import timedelta
 
 # Create your models here.
 class Workout(models.Model):
     name = models.CharField(max_length=30)
     created_at = models.DateTimeField(auto_now_add=True)
     description = models.TextField(blank=True)
+    
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -43,7 +45,13 @@ class WorkoutExercise(models.Model):
     sets = models.IntegerField(validators=[MinValueValidator(1)])
     reps = models.IntegerField(validators=[MinValueValidator(1)])
     rest_seconds = models.IntegerField(validators=[MinValueValidator(1)])
-    weight = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0)],
+    )
     workout = models.ForeignKey(
         Workout,
         related_name="workout_exercises",
@@ -69,14 +77,18 @@ class WorkoutExercise(models.Model):
             models.UniqueConstraint(
                 fields=["workout", "order"],
                 name="unique_order_per_workout",
-            ) 
+            ),
+            models.UniqueConstraint(
+                fields=["workout", "exercise"],
+                name="unique_exercise_per_workout",
+            ),
         ]
 
 class WorkoutSession(models.Model):
     scheduled_at = models.DateTimeField()
     STATUS_CHOICES = [
         ("scheduled", "Scheduled"),
-        ("cancelled", "Canacelled"),
+        ("cancelled", "Cancelled"),
         ("in_progress", "In progress"),
         ("completed", "Completed"),
     ]
@@ -86,8 +98,8 @@ class WorkoutSession(models.Model):
         default="scheduled",
     )
     completed_at = models.DateTimeField(blank=True, null=True)
-    note = models.CharField(120)
-    total_duration = models.DurationField(blank=True, null=True)
+    note = models.CharField(max_length=120, blank=True)
+    total_duration = models.DurationField(blank=True, null=True, validators=[MinValueValidator(timedelta(0))])
     workout = models.ForeignKey(
         Workout,
         on_delete=models.PROTECT,
@@ -99,6 +111,69 @@ class WorkoutSession(models.Model):
 
     class Meta:
         ordering = ["-scheduled_at"]
-        verbose_name = "WorkoutSessions"
-        verbose_name_plural = "WorkoutSession"
+        verbose_name = "Workout session"
+        verbose_name_plural = "Workout sessions"
         db_table = "WorkoutSession"
+
+class ExerciseResult(models.Model):
+    sets_completed = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    reps_completed = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    duration = models.DurationField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(timedelta(0))],
+    )
+
+    weight_completed = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0)],
+    )
+
+    note = models.CharField(
+        max_length=120,
+        blank=True,
+    )
+ 
+    exercise_order = models.PositiveIntegerField(editable=False)
+    
+    workout_session = models.ForeignKey(
+        WorkoutSession,
+        on_delete=models.PROTECT,
+        related_name="exercise_results",
+        related_query_name="exercise_result",
+    )
+
+    workout_exercise = models.ForeignKey(
+        WorkoutExercise,
+        on_delete=models.PROTECT,
+        related_name="exercise_results",
+        related_query_name="exercise_result",
+    )
+
+    exercise = models.ForeignKey(
+        Exercise,
+        on_delete=models.PROTECT,
+        related_name="exercise_results",
+        editable=False,
+    )
+    
+    def save(self, *args, **kwargs):
+        
+        if self._state.adding:
+            self.exercise_order = self.workout_exercise.order
+            self.exercise_id = self.workout_exercise.exercise_id
+            
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ["workout_session", "exercise_order"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workout_session", "workout_exercise"],
+                name="unique_exercise_result_per_session",
+           )
+        ]
