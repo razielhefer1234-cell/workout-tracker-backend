@@ -70,3 +70,34 @@ class WorkoutExercise(models.Model):
                 name="unique_order_per_workout",
             ) 
         ]
+
+class WorkoutSession(models.Model):
+    scheduled_at = models.DateTimeField()
+    STATUS_CHOICES = [
+        ("scheduled", "Scheduled"),
+        ("cancelled", "Canacelled"),
+        ("in_progress", "In progress"),
+        ("completed", "Completed"),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="scheduled",
+    )
+    completed_at = models.DateTimeField(blank=True, null=True)
+    note = models.CharField(120)
+    total_duration = models.DurationField(blank=True, null=True)
+    workout = models.ForeignKey(
+        Workout,
+        on_delete=models.PROTECT,
+        related_name="workout_sessions",
+        related_query_name="workout_session",
+    )
+    def __str__(self):
+        return self.workout.name
+
+    class Meta:
+        ordering = ["-scheduled_at"]
+        verbose_name = "WorkoutSessions"
+        verbose_name_plural = "WorkoutSession"
+        db_table = "WorkoutSession"
