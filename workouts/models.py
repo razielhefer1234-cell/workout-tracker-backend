@@ -43,6 +43,7 @@ class WorkoutExercise(models.Model):
     sets = models.IntegerField(validators=[MinValueValidator(1)])
     reps = models.IntegerField(validators=[MinValueValidator(1)])
     rest_seconds = models.IntegerField(validators=[MinValueValidator(1)])
+    weight = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
     workout = models.ForeignKey(
         Workout,
         related_name="workout_exercises",
