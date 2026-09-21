@@ -149,4 +149,7 @@ REST_FRAMEWORK = {
         "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER":
         "rest_framework.views.exception_handler",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
 }
