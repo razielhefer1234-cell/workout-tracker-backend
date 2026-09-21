@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
 
 class MyUserManager(BaseUserManager):
     def create_user(self, email, first_name, last_name, password):
@@ -17,7 +18,10 @@ class MyUserManager(BaseUserManager):
             last_name=last_name,
         )
 
+        validate_password(password, user=user)
+
         user.set_password(password)
+        user.full_clean()
         user.save(using=self._db)
         return user
 
