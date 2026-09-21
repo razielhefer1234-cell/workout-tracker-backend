@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'exercises',
     'workouts',
     'accounts',
+    "rest_framework_simplejwt.token_blacklist",
 ]
 
 AUTH_USER_MODEL = "accounts.MyUser"
