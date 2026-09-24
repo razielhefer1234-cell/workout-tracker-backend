@@ -177,6 +177,7 @@ A user can build and edit a complete ordered workout through the API.
 
 ---
 
+#I'm now here
 ## Session 6 — Scheduling and status changes
 
 ### Build
