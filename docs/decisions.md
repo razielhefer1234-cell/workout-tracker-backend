@@ -34,7 +34,7 @@ This is a backend-only learning project, not a polished SaaS.
 
 - A **workout plan** is a reusable template.
 - A **workout session** is one scheduled use of that plan on a specific date.
-- Session statuses are `pending`, `active`, and `completed`.
+- Session statuses are `scheduled`, `in_progress`, `cancelled`, and `completed`.
 - Plans store intended targets; sessions store actual results.
 - Editing a plan affects future sessions, not completed workout history.
 - A comment belongs to a specific workout session.

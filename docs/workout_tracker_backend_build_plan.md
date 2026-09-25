@@ -177,7 +177,7 @@ A user can build and edit a complete ordered workout through the API.
 
 ---
 
-#I'm now here
+
 ## Session 6 — Scheduling and status changes
 
 ### Build
@@ -201,7 +201,7 @@ A user can build and edit a complete ordered workout through the API.
 A user can schedule workouts, see upcoming sessions in the correct order, and perform only allowed status changes.
 
 ---
-
+#I'm now here
 ## Session 7 — Completion, results, and history
 
 ### Build

@@ -1,11 +1,13 @@
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
-from .models import Workout, WorkoutExercise
-from .serializers import WorkoutSerializer, WorkoutExerciseSerializer
+from .models import Workout, WorkoutExercise, WorkoutSession
+from .serializers import WorkoutSerializer, WorkoutExerciseSerializer, WorkoutSessionSerializer
 from workouts.permissions import IsOwner, IsOwnerNoUserField
 from django.shortcuts import get_object_or_404
 from exercises.models import Exercise
 from rest_framework.exceptions import ValidationError
+from django.utils import timezone
+
 
 class ReliableWorkoutViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOwner] 
@@ -21,7 +23,6 @@ class ReliableWorkoutViewSet(viewsets.ModelViewSet):
             .select_related("user")
             .order_by("name")
         )
-        
 
     def perform_create(self, serializer):
         name = serializer.validated_data["name"]
@@ -89,3 +90,76 @@ class ReliableWorkoutExerciseViewSet(viewsets.ModelViewSet):
             if WorkoutExercise.objects.filter(workout=current.workout, order=new_order).exclude(pk=current.pk).exists():
                 raise ValidationError({"order": "This order is already used in this workout."})
         serializer.save()
+
+class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsOwnerNoUserField] 
+    queryset = WorkoutSession.objects.all().order_by('-scheduled_at')
+    serializer_class = WorkoutSessionSerializer
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        status = self.request.query_params.get("status")
+        scheduled_at = self.request.query_params.get("scheduled_at")
+        if status is not None and scheduled_at is not None:
+            return(
+                WorkoutSession.objects
+                .filter(workout__user=self.request.user, status=status, scheduled_at__date=scheduled_at)
+                .select_related("workout")
+                .order_by("scheduled_at")
+            )
+        if status is not None:
+            return(
+                WorkoutSession.objects
+                .filter(workout__user=self.request.user, status=status)
+                .select_related("workout")
+                .order_by("scheduled_at")
+            )
+        if scheduled_at is not None:
+            return(
+                WorkoutSession.objects
+                .filter(workout__user=self.request.user, scheduled_at__date=scheduled_at)
+                .select_related("workout")
+                .order_by("scheduled_at")
+            )
+
+        return(
+            WorkoutSession.objects
+            .filter(workout__user=self.request.user)
+            .select_related("workout")
+            .order_by("scheduled_at")
+        )
+        
+    
+    def perform_create(self, serializer):
+        requested_status = serializer.validated_data.get("status", "scheduled")
+        raw_workout_id = self.request.data.get("workout")
+        scheduled_at = serializer.validated_data["scheduled_at"]
+        if requested_status != "scheduled":
+            raise ValidationError({"status": "A new session must start as scheduled."})
+        if scheduled_at is not None and scheduled_at < timezone.now():
+            raise ValidationError("The scheduled date and time must be in the future.")     
+        if not scheduled_at:
+            raise ValidationError({"scheduled_at": "This field is required."})
+        if not raw_workout_id:
+            raise ValidationError({"workout": "This field is required."})
+        try:
+            workout_id = int(self.request.data.get("workout"))
+        except (TypeError, ValueError):
+            raise ValidationError({"workout": "Workout ID must be an integer."})
+        workout = get_object_or_404(
+            Workout,
+            pk=workout_id,
+            user=self.request.user
+        )
+        serializer.save(workout=workout)
+
+    def perform_update(self, serializer):
+        current = serializer.instance
+        new_status = serializer.validated_data.get("status", current.status)
+        scheduled_at = serializer.validated_data.get("scheduled_at")
+        if scheduled_at is not None and scheduled_at < timezone.now():
+            raise ValidationError({"The scheduled date and time must be in the future."})
+        if current.status == "completed" and new_status != "completed":
+            raise ValidationError({"status": "A completed session's status cannot be changed."})
+        serializer.save()
+        
