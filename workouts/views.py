@@ -1,12 +1,15 @@
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
-from .models import Workout, WorkoutExercise, WorkoutSession
-from .serializers import WorkoutSerializer, WorkoutExerciseSerializer, WorkoutSessionSerializer
+from .models import Workout, WorkoutExercise, WorkoutSession, ExerciseResult
+from .serializers import WorkoutSerializer, WorkoutExerciseSerializer, WorkoutSessionSerializer, WorkoutCompletionSerializer, WorkoutHistorySerializer
 from workouts.permissions import IsOwner, IsOwnerNoUserField
 from django.shortcuts import get_object_or_404
 from exercises.models import Exercise
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db import transaction
 
 
 class ReliableWorkoutViewSet(viewsets.ModelViewSet):
@@ -97,6 +100,57 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
     serializer_class = WorkoutSessionSerializer
     pagination_class = PageNumberPagination
 
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        session = self.get_object()
+        if session.status == "completed":
+            raise ValidationError({"status": "This session has already been completed."})
+        if session.status == "cancelled":
+            raise ValidationError({"status": "A cancelled session cannot be completed."})
+        ser = WorkoutCompletionSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        ids = set()
+        results = ser.validated_data["results"]
+        for result in results:
+            workout_exercise_id = result["workout_exercise"].id
+            if workout_exercise_id in ids:
+                raise ValidationError({"results": "Each workout exercise can only appear once."})
+            ids.add(workout_exercise_id)
+            if result["workout_exercise"].workout_id != session.workout_id:
+                raise ValidationError({"results": "This exercise does not belong to the sessions workout"})
+        expected_ids = set()
+        for workout_exercise in session.workout.workout_exercises.all():
+            expected_ids.add(workout_exercise.id)
+        if expected_ids != ids:
+            raise ValidationError({"results": "Provide exactly one result for each exercise in the workout."})
+        with transaction.atomic():
+            for result in results:
+                ExerciseResult.objects.create(
+                    workout_session=session,
+                    **result,
+                )
+            session.note = ser.validated_data.get("note", session.note)
+            session.total_duration = ser.validated_data.get(
+                "total_duration",
+                session.total_duration,
+            )
+            session.status = "completed"
+            session.completed_at = timezone.now()
+            session.save()
+        return Response({"Completed": "Successfully completed"})
+
+    @action(detail=False, methods=['get'])
+    def history(self, request, pk=None):
+        queryset = (
+            self.get_queryset()
+            .filter(status="completed")
+            .prefetch_related("exercise_results")
+            .order_by("-completed_at")
+        )
+        page = self.paginate_queryset(queryset)
+        ser = WorkoutHistorySerializer(page, many=True)
+        return self.get_paginated_response(ser.data)
+
     def get_queryset(self):
         status = self.request.query_params.get("status")
         scheduled_at = self.request.query_params.get("scheduled_at")
@@ -161,5 +215,10 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
             raise ValidationError({"The scheduled date and time must be in the future."})
         if current.status == "completed" and new_status != "completed":
             raise ValidationError({"status": "A completed session's status cannot be changed."})
+        if current.status != "completed" and new_status == "completed":
+            raise ValidationError({
+                "status": "Use the completion endpoint to complete a session."
+            })
         serializer.save()
+
         

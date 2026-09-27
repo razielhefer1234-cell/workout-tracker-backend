@@ -132,11 +132,6 @@ class ExerciseResult(models.Model):
         validators=[MinValueValidator(0)],
     )
 
-    note = models.CharField(
-        max_length=120,
-        blank=True,
-    )
- 
     exercise_order = models.PositiveIntegerField(editable=False)
     
     workout_session = models.ForeignKey(

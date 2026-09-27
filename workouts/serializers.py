@@ -1,5 +1,7 @@
-from workouts.models import Workout, WorkoutExercise, WorkoutSession
+from workouts.models import Workout, WorkoutExercise, WorkoutSession, ExerciseResult
 from rest_framework import serializers
+from django.core.validators import MinValueValidator
+from datetime import timedelta
 
 class WorkoutExerciseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,5 +21,44 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkoutSession
         fields = '__all__'
-        read_only_fields = ("workout",)
-        
+        read_only_fields = ("workout", "completed_at",)
+
+class ExerciseResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExerciseResult
+        fields = '__all__'
+        read_only_fields = ("workout_session", "exercise",)
+
+class WorkoutCompletionSerializer(serializers.Serializer):
+    note = serializers.CharField(
+            max_length=120,
+            allow_blank=True,
+            required=False,
+        )
+    total_duration = serializers.DurationField(allow_null=True, required=False, validators=[MinValueValidator(timedelta(0))])
+    results = ExerciseResultSerializer(many=True, allow_empty=False)
+
+class WorkoutHistorySerializer(serializers.ModelSerializer):
+    exercise_results = ExerciseResultSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = WorkoutSession
+        fields = [
+            "id",
+            "workout",
+            "scheduled_at",
+            "status",
+            "completed_at",
+            "note",
+            "total_duration",
+            "exercise_results",
+        ]
+        read_only_fields = (
+            "id", 
+            "workout",
+            "scheduled_at",
+            "status",
+            "completed_at",
+            "note",
+            "total_duration",
+        )
