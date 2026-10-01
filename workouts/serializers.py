@@ -2,6 +2,7 @@ from workouts.models import Workout, WorkoutExercise, WorkoutSession, ExerciseRe
 from rest_framework import serializers
 from django.core.validators import MinValueValidator
 from datetime import timedelta
+from rest_framework.exceptions import ValidationError
 
 class WorkoutExerciseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -62,3 +63,12 @@ class WorkoutHistorySerializer(serializers.ModelSerializer):
             "note",
             "total_duration",
         )
+
+class ReportDateRangeSerializer(serializers.Serializer):
+    start_date = serializers.DateField(required=True)
+    end_date = serializers.DateField(required=True)
+
+    def validate(self, attrs):
+        if attrs["start_date"] > attrs["end_date"]:
+            raise ValidationError({"date": "The start date cannot be after the end date."})
+        return attrs

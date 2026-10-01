@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 from .models import Workout, WorkoutExercise, WorkoutSession, ExerciseResult
-from .serializers import WorkoutSerializer, WorkoutExerciseSerializer, WorkoutSessionSerializer, WorkoutCompletionSerializer, WorkoutHistorySerializer
+from .serializers import WorkoutSerializer, WorkoutExerciseSerializer, WorkoutSessionSerializer, WorkoutCompletionSerializer, WorkoutHistorySerializer, ReportDateRangeSerializer
 from workouts.permissions import IsOwner, IsOwnerNoUserField
 from django.shortcuts import get_object_or_404
 from exercises.models import Exercise
@@ -10,6 +10,8 @@ from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from django.db.models import F, ExpressionWrapper, DecimalField, Sum, Max
+
 
 
 class ReliableWorkoutViewSet(viewsets.ModelViewSet):
@@ -182,8 +184,70 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
             .select_related("workout")
             .order_by("scheduled_at")
         )
+
+    @action(detail=False, methods=['get'])
+    def completed_workouts_report(self, request):
+        data = ReportDateRangeSerializer(data=request.query_params)
+        data.is_valid(raise_exception=True)
+        start_date = data.validated_data["start_date"]
+        end_date = data.validated_data["end_date"]
+        queryset = (
+            WorkoutSession.objects
+            .filter(status="completed", completed_at__date__range=(start_date, end_date), workout__user=request.user)
+        )
+        count = queryset.count()
+        return Response({
+            "start_date": start_date,
+            "end_date": end_date,
+            "completed_workouts": count,
+        })
+
+    @action(detail=False, methods=['get'])
+    def training_volume_report(self, request):
+        data = ReportDateRangeSerializer(data=request.query_params)
+        data.is_valid(raise_exception=True)
+        start_date = data.validated_data["start_date"]
+        end_date = data.validated_data["end_date"]
+        queryset = (
+            ExerciseResult.objects
+            .filter(workout_session__status="completed", workout_session__completed_at__date__range=(start_date, end_date), workout_session__workout__user=request.user)
+            .annotate(
+                result_volume=ExpressionWrapper(
+                    F("sets_completed")
+                    * F("reps_completed")
+                    * F("weight_completed"),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
+            )
+            .values("exercise_id", "exercise__name")
+            .annotate(total_volume=Sum("result_volume", default=0)) 
+            .order_by("exercise__name")
+        )
+        return Response({
+            "start_date": start_date,
+            "end_date": end_date,
+            "results": list(queryset),
+        })
+
+    @action(detail=False, methods=['get'])
+    def highest_weight_report(self, request):
+        data = ReportDateRangeSerializer(data=request.query_params)
+        data.is_valid(raise_exception=True)
+        start_date = data.validated_data["start_date"]
+        end_date = data.validated_data["end_date"]
+        queryset = (
+            ExerciseResult.objects
+            .filter(workout_session__status="completed", workout_session__completed_at__date__range=(start_date, end_date), workout_session__workout__user=request.user)
+            .values("exercise_id", "exercise__name")
+            .annotate(highest_weight=Max("weight_completed"))
+            .order_by("exercise__name")
+        )
+        return Response({
+            "start_date": start_date,
+            "end_date": end_date,
+            "results": list(queryset),
+        })
         
-    
     def perform_create(self, serializer):
         requested_status = serializer.validated_data.get("status", "scheduled")
         raw_workout_id = self.request.data.get("workout")
@@ -220,5 +284,3 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
                 "status": "Use the completion endpoint to complete a session."
             })
         serializer.save()
-
-        
