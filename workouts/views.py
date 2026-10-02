@@ -283,4 +283,6 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
             raise ValidationError({
                 "status": "Use the completion endpoint to complete a session."
             })
+        if current.status == "cancelled" and new_status != current.status:
+            raise ValidationError({"status": "A cancelled session's status cannot be changed."})
         serializer.save()

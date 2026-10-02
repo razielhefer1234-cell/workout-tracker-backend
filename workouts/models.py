@@ -89,7 +89,6 @@ class WorkoutSession(models.Model):
     STATUS_CHOICES = [
         ("scheduled", "Scheduled"),
         ("cancelled", "Cancelled"),
-        ("in_progress", "In progress"),
         ("completed", "Completed"),
     ]
     status = models.CharField(
