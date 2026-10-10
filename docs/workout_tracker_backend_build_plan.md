@@ -280,7 +280,34 @@ The full user journey passes in automated tests, and another developer can under
 
 ---
 
-## Session 10 — Production preparation and deployment
+## Session 10 — Django Admin
+
+### Build
+
+- Register the custom user, exercise, workout, workout exercise, workout session, and exercise result models with Django Admin.
+- Configure the custom user admin so staff can view users by email and safely manage staff and active status.
+- Add useful list columns, search fields, filters, ordering, and read-only timestamps for the main models.
+- Use inlines only where they make related workout or session data easier to inspect without making the admin confusing.
+- Create a superuser and confirm that non-staff users cannot access the admin site.
+- Keep Django Admin as an internal staff tool; do not treat it as the public workout-tracker interface.
+- Add the superuser command and local admin URL to the README.
+
+### Verify
+
+- Log in at `/admin/` with a superuser account.
+- Confirm all registered models appear and their list pages are readable.
+- Confirm search and filters work on the configured models.
+- Confirm passwords are never displayed as plain text.
+- Confirm important historical fields are not accidentally changed while inspecting completed sessions and results.
+- Run the automated test suite and confirm the API still behaves the same.
+
+### Finished when
+
+A superuser can safely inspect and manage the exercise catalog, users, workouts, sessions, and results through a clear internal admin interface.
+
+---
+
+## Session 11 — Production preparation and deployment
 
 ### Build
 
@@ -338,6 +365,7 @@ The project is complete when all of the following work:
 - Users cannot access one another's private information.
 - Important rules and workflows have automated tests.
 - API documentation matches the actual endpoints.
+- Staff can inspect and manage project data through Django Admin.
 - The production deployment uses HTTPS, production settings, and persistent PostgreSQL data.
 
 Once these are true, stop adding features. Record optional ideas in a version 2 list and move to your next project.

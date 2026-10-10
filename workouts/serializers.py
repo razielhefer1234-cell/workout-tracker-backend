@@ -72,3 +72,31 @@ class ReportDateRangeSerializer(serializers.Serializer):
         if attrs["start_date"] > attrs["end_date"]:
             raise ValidationError({"date": "The start date cannot be after the end date."})
         return attrs
+
+class WorkoutCompletionResponseSerializer(serializers.Serializer):
+    Completed = serializers.CharField()
+
+class CompletedWorkoutsReportSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    completed_workouts = serializers.IntegerField()
+
+class TrainingVolumeResultSerializer(serializers.Serializer):
+    exercise_id = serializers.IntegerField()
+    exercise__name = serializers.CharField()
+    total_volume = serializers.FloatField()
+
+class TrainingVolumeReportSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    results = TrainingVolumeResultSerializer(many=True)
+
+class HighestWeightResultSerializer(serializers.Serializer):
+    exercise_id = serializers.IntegerField()
+    exercise__name = serializers.CharField()
+    highest_weight = serializers.FloatField()
+
+class HighestWeightReportSerializer(serializers.Serializer):
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    results = HighestWeightResultSerializer(many=True)

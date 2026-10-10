@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
 from .models import Workout, WorkoutExercise, WorkoutSession, ExerciseResult
-from .serializers import WorkoutSerializer, WorkoutExerciseSerializer, WorkoutSessionSerializer, WorkoutCompletionSerializer, WorkoutHistorySerializer, ReportDateRangeSerializer
+from .serializers import WorkoutSerializer, WorkoutExerciseSerializer, WorkoutSessionSerializer, WorkoutCompletionSerializer, WorkoutHistorySerializer, ReportDateRangeSerializer, WorkoutCompletionResponseSerializer, CompletedWorkoutsReportSerializer, TrainingVolumeReportSerializer, HighestWeightReportSerializer
 from workouts.permissions import IsOwner, IsOwnerNoUserField
 from django.shortcuts import get_object_or_404
 from exercises.models import Exercise
@@ -11,7 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from django.db.models import F, ExpressionWrapper, DecimalField, Sum, Max
-
+from drf_spectacular.utils import extend_schema, OpenApiExample
 
 
 class ReliableWorkoutViewSet(viewsets.ModelViewSet):
@@ -102,6 +102,36 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
     serializer_class = WorkoutSessionSerializer
     pagination_class = PageNumberPagination
 
+    @extend_schema(
+            request=WorkoutCompletionSerializer,
+            responses={200: WorkoutCompletionResponseSerializer},
+            examples=[
+                OpenApiExample(
+                    "Complete workout session",
+                    value={
+                        "note": "I need to drink a lot of water",
+                        "total_duration": "00:45:00",
+                        "results": [
+                            {
+                                "workout_exercise": 1,
+                                "sets_completed": 3,
+                                "reps_completed": 10,
+                                "weight_completed": 40.00,
+                            },
+                        ],
+                    },
+                    request_only=True
+                ),
+                OpenApiExample(
+                    "Successful completion",
+                    value={
+                        "Completed": "Successfully completed",
+                    },
+                    response_only=True,
+                    status_codes=[200],
+                ),
+            ],
+    )
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
         session = self.get_object()
@@ -141,6 +171,9 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
             session.save()
         return Response({"Completed": "Successfully completed"})
 
+    @extend_schema(
+        responses={200: WorkoutHistorySerializer(many=True)},
+    )
     @action(detail=False, methods=['get'])
     def history(self, request, pk=None):
         queryset = (
@@ -185,6 +218,22 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
             .order_by("scheduled_at")
         )
 
+    @extend_schema(
+        parameters=[ReportDateRangeSerializer],
+        responses={200: CompletedWorkoutsReportSerializer},
+        examples=[
+            OpenApiExample(
+                "Completed workouts report",
+                value={
+                    "start_date": "2026-10-01",
+                    "end_date": "2026-10-31",
+                    "completed_workouts": 8,
+                },
+                response_only=True,
+                status_codes=[200],
+            ),
+        ],
+    )
     @action(detail=False, methods=['get'])
     def completed_workouts_report(self, request):
         data = ReportDateRangeSerializer(data=request.query_params)
@@ -202,6 +251,28 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
             "completed_workouts": count,
         })
 
+    @extend_schema(
+            parameters=[ReportDateRangeSerializer],
+            responses={200: TrainingVolumeReportSerializer},
+            examples=[
+                OpenApiExample(
+                    "Training volume report",
+                    value={
+                        "start_date": "2026-10-01",
+                        "end_date": "2026-10-31",
+                        "results": [
+                            {
+                                "exercise_id": 1,
+                                "exercise__name": "Bench Press",
+                                "total_volume": 340.0,
+                            },
+                        ],
+                    },
+                    response_only=True,
+                    status_codes=[200],
+                ),
+            ],
+    )
     @action(detail=False, methods=['get'])
     def training_volume_report(self, request):
         data = ReportDateRangeSerializer(data=request.query_params)
@@ -229,6 +300,28 @@ class ReliableWorkoutSessionViewSet(viewsets.ModelViewSet):
             "results": list(queryset),
         })
 
+    @extend_schema(
+            parameters=[ReportDateRangeSerializer],
+            responses={200: HighestWeightReportSerializer},
+            examples=[
+                OpenApiExample(
+                    "Highest weight report",
+                    value={
+                        "start_date": "2026-10-01",
+                        "end_date": "2026-10-31",
+                        "results": [
+                            {
+                                "exercise_id": 1,
+                                "exercise__name": "Bench Press",
+                                "highest_weight": 100.0,
+                            },
+                        ],
+                    },
+                    response_only=True,
+                    status_codes=[200],
+                ),
+            ],
+    )
     @action(detail=False, methods=['get'])
     def highest_weight_report(self, request):
         data = ReportDateRangeSerializer(data=request.query_params)

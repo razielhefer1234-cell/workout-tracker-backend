@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'exercises',
     'workouts',
     'accounts',
-    "rest_framework_simplejwt.token_blacklist",
+    'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
 ]
 
 AUTH_USER_MODEL = "accounts.MyUser"
@@ -154,6 +155,20 @@ REST_FRAMEWORK = {
         'anon': '30/hour',
         'user': '1000/day',
     },
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Workout Tracker API",
+    "VERSION": "1.0.0",
+    "DESCRIPTION": """
+## Authentication
+
+1. Send your email and password to `/login`.
+2. Copy the `access` token from the response.
+3. Click **Authorize** in Swagger.
+4. Paste only the access token. Swagger adds the `Bearer` prefix automatically.
+5. Use `/token/refresh/` with your refresh token when you need a new access token.
+""",
 }
 
 CACHES = {

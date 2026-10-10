@@ -176,7 +176,7 @@ class MyUserTests(TestCase):
             }
         )
         access_token = response1.json()["access"]
-        response2 = self.client.post(
+        response2 = self.client.get(
             reverse('user_info'),
         )
         self.assertEqual(response2.status_code, 401)

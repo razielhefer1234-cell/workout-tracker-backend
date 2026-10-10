@@ -7,7 +7,10 @@ from .models import MyUser
 from rest_framework.permissions import AllowAny
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError
+from drf_spectacular.utils import extend_schema, OpenApiExample
+from .serializers import SignUpRequestSerializer, SignUpResponseSerializer, CurrentUserResponseSerializer, LogoutRequestSerializer, LogoutResponseSerializer
 
+@extend_schema(responses={200: CurrentUserResponseSerializer})
 @api_view(["GET"])
 def current_user(request):
     return Response({
@@ -17,6 +20,7 @@ def current_user(request):
         "last_name": request.user.last_name,
     }, status=200)
 
+@extend_schema(request=LogoutRequestSerializer, responses={200: LogoutResponseSerializer})
 @api_view(["POST"])
 def logout(request):
     refresh_token_string = request.data.get("refresh")
@@ -29,6 +33,30 @@ def logout(request):
     token.blacklist()
     return Response({"detail": "Logged out successfully."}, status=200)
 
+@extend_schema(
+    request=SignUpRequestSerializer,
+    responses={201: SignUpResponseSerializer},
+    examples=[
+        OpenApiExample(
+            "Sign-up request",
+            value={
+                "email": "user@example.com",
+                "password": "StrongPassword123!",
+                "first_name": "John",
+                "last_name": "Smith",
+            },
+            request_only=True,
+        ),
+        OpenApiExample(
+            "Successful sign-up",
+            value={
+                "detail": "Account created. Please log in.",
+            },
+            response_only=True,
+            status_codes=[201],
+        ),
+    ],
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def sign_up(request):
