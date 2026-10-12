@@ -94,6 +94,21 @@ python manage.py runserver
 
 The API is available at `http://127.0.0.1:8000/`.
 
+## Django Admin
+
+Create a superuser for local administration:
+
+```bash
+python manage.py createsuperuser
+```
+
+After starting the development server, open the admin site at
+`http://127.0.0.1:8000/admin/`.
+
+Only staff users can access Django Admin. It is an internal tool for managing
+users, exercises, workouts, sessions, and results; it is not the public
+workout-tracker interface.
+
 ## Authentication
 
 Register a user with `POST /accounts/sign-up/`, then log in with `POST /login` using the same email and password. The login response contains `access` and `refresh` tokens.
