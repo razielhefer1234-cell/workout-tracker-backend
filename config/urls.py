@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
+from .views import health_check
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -33,6 +34,7 @@ urlpatterns = [
     path('workout/', include('workouts.urls')),
     path("login", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("health-check/", health_check, name="health_check")
 ]
 
 if settings.DEBUG:

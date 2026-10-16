@@ -1,0 +1,1 @@
+web: gunicorn --bind :8000 config.wsgi:application --workers 3 --timeout 30 --access-logfile - --error-logfile -
